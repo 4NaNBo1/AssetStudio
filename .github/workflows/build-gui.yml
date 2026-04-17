@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,12 +41,14 @@ jobs:
         run: |
           cd dist
           APP_NAME="$(ls -d *.app | head -1)"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "UnityPyExplorer-mac-arm64.zip"
+          ZIP_NAME="${APP_NAME%.app}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4
         with:
-          name: UnityPyExplorer-mac-arm64
-          path: dist/UnityPyExplorer-mac-arm64.zip
+          name: AssetStudio-mac-arm64
+          path: dist/AssetStudio-*-mac-arm64.zip
           retention-days: 1
 
   build-windows:
@@ -56,6 +59,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -73,13 +77,14 @@ jobs:
       - name: Zip output
         shell: pwsh
         run: |
-          $folder = Get-ChildItem -Path dist -Directory | Where-Object { $_.Name -like "UnityPyExplorer-*" } | Select-Object -First 1
-          Compress-Archive -Path "$($folder.FullName)\*" -DestinationPath "dist\UnityPyExplorer-win64.zip"
+          $folder = Get-ChildItem -Path dist -Directory | Where-Object { $_.Name -like "AssetStudio-*" } | Select-Object -First 1
+          $zipName = "$($folder.Name).zip"
+          Compress-Archive -Path "$($folder.FullName)\*" -DestinationPath "dist\$zipName"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: UnityPyExplorer-win64
-          path: dist/UnityPyExplorer-win64.zip
+          name: AssetStudio-win64
+          path: dist/AssetStudio-*-win64.zip
           retention-days: 1
 
   release:
@@ -104,9 +109,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.version }}
-          name: UnityPy Explorer ${{ inputs.version }}
+          name: AssetStudio ${{ inputs.version }}
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: true
           files: |
-            artifacts/UnityPyExplorer-mac-arm64.zip
-            artifacts/UnityPyExplorer-win64.zip
+            artifacts/AssetStudio-*-mac-arm64.zip
+            artifacts/AssetStudio-*-win64.zip

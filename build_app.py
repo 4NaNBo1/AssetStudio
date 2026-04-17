@@ -38,10 +38,10 @@ from pathlib import Path
 #  Constants
 # ═══════════════════════════════════════════════════════════════════════
 
-APP_NAME = "UnityPy Explorer"
-EXE_NAME = "UnityPyExplorer"
+APP_NAME = "AssetStudio"
+EXE_NAME = "AssetStudio"
 VERSION = "1.0.0"
-BUNDLE_ID = "com.unitypy.explorer"
+BUNDLE_ID = "com.assetstudio.app"
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 ENTRY_SCRIPT = PROJECT_ROOT / "run_explorer.py"
@@ -158,14 +158,14 @@ def generate_spec(target: str) -> Path:
     spec_name = f"UnityPyExplorer_{target}.spec"
     spec_path = PROJECT_ROOT / spec_name
 
-    # Output sub-directory
-    out_name = f"{EXE_NAME}-{target}"
+    # Output sub-directory: e.g. AssetStudio-v1.0.0-mac-arm64
+    out_name = f"{EXE_NAME}-v{VERSION}-{target}"
 
     # Runtime hooks
     rt_hooks = f"[{repr(str(RUNTIME_HOOK))}]" if RUNTIME_HOOK.exists() else "[]"
 
     # Platform-specific values
-    argv_emu = "True" if is_mac else "False"
+    argv_emu = "False"
     fmod_comment = "# fmod_toolkit native library (libfmod.dylib)" if is_mac else "# fmod_toolkit native library (fmod.dll)"
 
     lines: list[str] = []
@@ -397,14 +397,14 @@ def build_target(target: str, clean: bool = False):
         return False
 
     # Report output
-    out_name = f"{EXE_NAME}-{target}"
+    out_name = f"{EXE_NAME}-v{VERSION}-{target}"
     is_mac = info["os"] == "Darwin"
 
     if is_mac:
         app_path = DIST_DIR / f"{APP_NAME}.app"
-        final_path = DIST_DIR / f"{APP_NAME}-{target}.app"
+        final_path = DIST_DIR / f"{APP_NAME}-v{VERSION}-{target}.app"
         if app_path.exists():
-            # Rename to include target in name
+            # Rename to include version + target in name
             if final_path.exists():
                 shutil.rmtree(final_path)
             app_path.rename(final_path)

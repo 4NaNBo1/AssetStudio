@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from enum import IntEnum, IntFlag
-from importlib.resources import open_binary
 from io import BytesIO
+from pathlib import Path
 from struct import Struct
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
@@ -17,9 +17,48 @@ CLASSES_CACHE: Dict[Tuple[int, UnityVersion], TypeTreeNode] = {}
 NODES_CACHE: Dict[TpkUnityClass, TypeTreeNode] = {}
 
 
+def _find_tpk_path(name: str) -> Path:
+    """Locate a .tpk resource file, handling both normal and PyInstaller-frozen environments."""
+    import sys
+
+    # PyInstaller frozen bundle: check _MEIPASS first
+    if getattr(sys, "frozen", False):
+        meipass = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+        p = meipass / "UnityPy" / "resources" / name
+        if p.exists():
+            return p
+
+    # Normal: relative to this file → ../resources/<name>
+    p = Path(__file__).resolve().parent.parent / "resources" / name
+    if p.exists():
+        return p
+
+    # Fallback: try importlib.resources (older UnityPy installations via pip)
+    try:
+        from importlib.resources import files as _res_files
+        ref = _res_files("UnityPy.resources").joinpath(name)
+        path = Path(str(ref))
+        if path.exists():
+            return path
+    except Exception:
+        pass
+
+    raise FileNotFoundError(f"Cannot locate UnityPy resource: {name}")
+
+
 def init():
-    with open_binary("UnityPy.resources", "lzma.tpk") as f:
-        data = f.read()
+    for tpk_name in ("lzma.tpk", "uncompressed.tpk"):
+        try:
+            tpk_path = _find_tpk_path(tpk_name)
+            with open(tpk_path, "rb") as f:
+                data = f.read()
+            # Quick sanity check: first 4 bytes must be TPK magic
+            if len(data) >= 4 and Struct("<I").unpack(data[:4])[0] == 0x2A4B5054:
+                break
+        except (FileNotFoundError, OSError):
+            continue
+    else:
+        raise FileNotFoundError("Cannot find a valid .tpk resource file for UnityPy")
 
     global TPKTYPETREE
     with BytesIO(data) as stream:
