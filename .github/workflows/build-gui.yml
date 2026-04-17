@@ -1,6 +1,9 @@
 name: Release GUI App
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -103,12 +106,23 @@ jobs:
       - name: List artifacts
         run: ls -lhR artifacts/
 
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Resolved version: $VERSION"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version }}
-          name: AssetStudio ${{ inputs.version }}
-          prerelease: ${{ inputs.prerelease }}
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: AssetStudio ${{ steps.ver.outputs.version }}
+          prerelease: ${{ inputs.prerelease || false }}
           generate_release_notes: true
           files: |
             artifacts/AssetStudio-*-mac-arm64.zip
